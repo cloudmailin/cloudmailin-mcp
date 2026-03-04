@@ -51,6 +51,14 @@ class CloudMailinClient {
       query: query
     });
   }
+
+  // Get sent (outbound) messages
+  async getSentMessages(outboundAccountId: string, query?: string) {
+    return this.request('outbound_messages', {
+      outbound_account_id: outboundAccountId,
+      ...(query && { query })
+    });
+  }
 }
 
 // Main function to set up and start the MCP server
@@ -77,6 +85,10 @@ async function main() {
         {
           name: "listMessages",
           description: "Lists all messages for an address. Requires address ID obtained from listAddresses.",
+        },
+        {
+          name: "listSentMessages",
+          description: "Lists sent outbound messages and their delivery status.",
         }
       ]
     }
@@ -95,6 +107,9 @@ async function main() {
   } catch {
     console.error("MessageClient not available (CLOUDMAILIN_SMTP_URL not set)");
   }
+
+  const outboundAccountId = process.env.CLOUDMAILIN_SMTP_URL
+    ? new URL(process.env.CLOUDMAILIN_SMTP_URL).username : '';
 
   const defaultSender = process.env.CLOUDMAILIN_SENDER || '';
 
@@ -152,6 +167,44 @@ async function main() {
       return {
         content: [{
           type: "text",
+          text: JSON.stringify(messages, null, 2)
+        }]
+      };
+    }
+  );
+
+  // List sent (outbound) messages
+  server.tool(
+    "listSentMessages",
+    {
+      query: z.string().optional()
+        .describe("Search query to filter sent messages")
+    },
+    async (params) => {
+      if (!client) {
+        return {
+          content: [{
+            type: "text" as const,
+            text: "Error: CLOUDMAILIN_ACCOUNT_ID and CLOUDMAILIN_API_KEY environment variables must be set"
+          }],
+          isError: true
+        };
+      }
+
+      if (!outboundAccountId) {
+        return {
+          content: [{
+            type: "text" as const,
+            text: "Error: CLOUDMAILIN_SMTP_URL environment variable must be set to list sent messages"
+          }],
+          isError: true
+        };
+      }
+
+      const messages = await client.getSentMessages(outboundAccountId, params.query);
+      return {
+        content: [{
+          type: "text" as const,
           text: JSON.stringify(messages, null, 2)
         }]
       };

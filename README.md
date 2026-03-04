@@ -11,6 +11,7 @@ Protocol. It provides tools for:
 
 - [Listing all email addresses in a CloudMailin account](#listaddresses)
 - [Listing all messages for a given address](#listmessages)
+- [Listing sent outbound messages](#listsentmessages)
 - [Sending email with markdown support](#sendemail)
 
 ## Running the MCP Server
@@ -168,6 +169,18 @@ Example Response:
   ]
 }
 ```
+
+### listSentMessages
+
+Lists sent outbound messages and their delivery status. The outbound account ID
+is automatically parsed from `CLOUDMAILIN_SMTP_URL`.
+
+| Parameter | Type   | Required | Description |
+|-----------|--------|----------|-------------|
+| `query`   | string | No       | Search query to filter sent messages |
+
+Requires both `CLOUDMAILIN_ACCOUNT_ID`/`CLOUDMAILIN_API_KEY` (for API access)
+and `CLOUDMAILIN_SMTP_URL` (to identify the outbound account).
 
 ### sendEmail
 
