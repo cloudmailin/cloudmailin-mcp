@@ -19,6 +19,7 @@
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.11.4",
     "axios": "^1.6.2",
+    "cloudmailin": "file:../cloudmailin-js",
     "zod": "^4.0.5"
   },
   "devDependencies": {

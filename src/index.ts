@@ -3,9 +3,12 @@ import { z } from "zod";
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import axios from 'axios';
+import { MessageClient } from 'cloudmailin';
+import type { Message } from 'cloudmailin';
 
 // Define constants
-const API_BASE_URL = 'https://api.cloudmailin.com/api/v0.1';
+const API_BASE_URL = process.env.CLOUDMAILIN_BASE_URL ||
+  'https://api.cloudmailin.com/api/v0.1';
 
 // A class to handle CloudMailin API interactions
 class CloudMailinClient {
@@ -85,6 +88,16 @@ async function main() {
     client = new CloudMailinClient(accountId, apiKey);
   }
 
+  // Create the outbound MessageClient (reads CLOUDMAILIN_SMTP_URL from env)
+  let messageClient: MessageClient | null = null;
+  try {
+    messageClient = new MessageClient();
+  } catch {
+    console.error("MessageClient not available (CLOUDMAILIN_SMTP_URL not set)");
+  }
+
+  const defaultSender = process.env.CLOUDMAILIN_SENDER || '';
+
   // Add a tool to list all addresses
   server.tool(
     "listAddresses",
@@ -142,6 +155,77 @@ async function main() {
           text: JSON.stringify(messages, null, 2)
         }]
       };
+    }
+  );
+
+  // Send an email via CloudMailin outbound
+  server.tool(
+    "sendEmail",
+    "Send an email via CloudMailin. Prefer using the `markdown` field for body content — it will be automatically converted to HTML and plain text.",
+    {
+      to: z.string().describe("Recipient email address(es)"),
+      subject: z.string().describe("Email subject line"),
+      markdown: z.string().optional()
+        .describe("Markdown body (preferred). Converted to HTML and plain text automatically."),
+      plain: z.string().optional().describe("Plain text body"),
+      html: z.string().optional().describe("HTML body"),
+      from: z.string().optional()
+        .describe("Sender address. Defaults to CLOUDMAILIN_SENDER env var."),
+      cc: z.string().optional().describe("CC recipient(s)"),
+      tags: z.array(z.string()).optional().describe("Tags for filtering in the dashboard"),
+      testMode: z.boolean().optional().describe("Validate without sending"),
+    },
+    async (params) => {
+      if (!messageClient) {
+        return {
+          content: [{
+            type: "text" as const,
+            text: "Error: CLOUDMAILIN_SMTP_URL environment variable must be set to send emails"
+          }],
+          isError: true
+        };
+      }
+
+      const from = params.from || defaultSender;
+      if (!from) {
+        return {
+          content: [{
+            type: "text" as const,
+            text: "Error: No sender address. Provide `from` or set CLOUDMAILIN_SENDER env var."
+          }],
+          isError: true
+        };
+      }
+
+      const message: Message = {
+        to: params.to,
+        from,
+        subject: params.subject,
+        ...(params.markdown && { markdown: params.markdown }),
+        ...(params.plain && { plain: params.plain }),
+        ...(params.html && { html: params.html }),
+        ...(params.cc && { cc: params.cc }),
+        ...(params.tags && { tags: params.tags }),
+        ...(params.testMode !== undefined && { test_mode: params.testMode }),
+      };
+
+      try {
+        const response = await messageClient.sendMessage(message);
+        return {
+          content: [{
+            type: "text" as const,
+            text: JSON.stringify(response, null, 2)
+          }]
+        };
+      } catch (error) {
+        return {
+          content: [{
+            type: "text" as const,
+            text: `Error sending email: ${error instanceof Error ? error.message : String(error)}`
+          }],
+          isError: true
+        };
+      }
     }
   );
 

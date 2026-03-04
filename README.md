@@ -11,6 +11,7 @@ Protocol. It provides tools for:
 
 - [Listing all email addresses in a CloudMailin account](#listaddresses)
 - [Listing all messages for a given address](#listmessages)
+- [Sending email with markdown support](#sendemail)
 
 ## Running the MCP Server
 
@@ -25,7 +26,7 @@ npm run build
 Then run the built server:
 
 ```bash
-CLOUDMAILIN_ACCOUNT_ID=your_account_id CLOUDMAILIN_API_KEY=your_api_key node build/index.js
+CLOUDMAILIN_ACCOUNT_ID=your_account_id CLOUDMAILIN_API_KEY=your_api_key CLOUDMAILIN_SMTP_URL=smtp://user:pass@host:587 CLOUDMAILIN_SENDER=sender@example.com node build/index.js
 ```
 
 You can also integrate with Cursor / Claude Desktop for production use by adding
@@ -42,7 +43,9 @@ the following to your config file (e.g. `.cursor/mcp.json`):
       ],
       "env": {
         "CLOUDMAILIN_ACCOUNT_ID": "your_account_id",
-        "CLOUDMAILIN_API_KEY": "your_api_key"
+        "CLOUDMAILIN_API_KEY": "your_api_key",
+        "CLOUDMAILIN_SMTP_URL": "smtp://user:pass@host:587",
+        "CLOUDMAILIN_SENDER": "sender@example.com"
       }
     }
   }
@@ -51,6 +54,15 @@ the following to your config file (e.g. `.cursor/mcp.json`):
 
 > Be sure to adjust the path if necessary, this path assumes you're just running
 > via containers.
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `CLOUDMAILIN_ACCOUNT_ID` | Yes (for inbound tools) | Your CloudMailin account ID |
+| `CLOUDMAILIN_API_KEY` | Yes (for inbound tools) | Your CloudMailin API key |
+| `CLOUDMAILIN_SMTP_URL` | Yes (for sendEmail) | SMTP URL from your outbound account settings |
+| `CLOUDMAILIN_SENDER` | No | Default sender address when `from` is omitted |
 
 ## Development
 
@@ -156,3 +168,23 @@ Example Response:
   ]
 }
 ```
+
+### sendEmail
+
+Send an email via CloudMailin. Prefer using the `markdown` field for body
+content — it will be automatically converted to HTML and plain text.
+
+| Parameter  | Type     | Required | Description |
+|------------|----------|----------|-------------|
+| `to`       | string   | Yes      | Recipient email address(es) |
+| `subject`  | string   | Yes      | Email subject line |
+| `markdown` | string   | No       | Markdown body (preferred) |
+| `plain`    | string   | No       | Plain text body |
+| `html`     | string   | No       | HTML body |
+| `from`     | string   | No       | Sender address (defaults to `CLOUDMAILIN_SENDER`) |
+| `cc`       | string   | No       | CC recipient(s) |
+| `tags`     | string[] | No       | Tags for filtering in the dashboard |
+| `testMode` | boolean  | No       | Validate without sending |
+
+Requires `CLOUDMAILIN_SMTP_URL` to be set. The SMTP URL can be found in your
+outbound account settings in the CloudMailin dashboard.
