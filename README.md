@@ -1,5 +1,11 @@
 # CloudMailin MCP
 
+> [!WARNING]
+> **This local MCP server is deprecated.** CloudMailin now provides a hosted
+> remote MCP server — no installation or API keys needed, just connect to
+> `https://mcp.cloudmailin.com/mcp` and sign in. See
+> [www.cloudmailin.com/mcp](https://www.cloudmailin.com/mcp) for details.
+
 An MCP (Model Context Protocol) server for integrating with the CloudMailin API.
 This currently uses the stdio transport and needs to be installed locally.
 
